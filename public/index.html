@@ -264,7 +264,10 @@
                 <h3><i class="fa-solid fa-credit-card"></i> Digital Subscription Audit</h3>
                 <p class="card-desc text-muted">Scans billing logs and correlates active usage to identify financial and mental fatigue leaks.</p>
               </div>
-              <button class="btn btn-outline" id="refreshSubsBtn"><i class="fa-solid fa-rotate"></i> Scan Stripe</button>
+              <div class="sub-header-actions" style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-outline" id="refreshSubsBtn"><i class="fa-solid fa-rotate"></i> Scan Stripe</button>
+                <button class="btn btn-primary" id="openAddSubModalBtn"><i class="fa-solid fa-plus"></i> Add Subscription</button>
+              </div>
             </div>
             
             <div class="table-container">
@@ -390,6 +393,50 @@
     <footer class="app-footer-info">
       <p>&copy; 2026 Clarity. Built for Idea2Impact Online Hackathon. Focused on mental wellness & attention preservation.</p>
     </footer>
+  </div>
+
+  <!-- Add Subscription Modal -->
+  <div class="modal-overlay hidden" id="addSubModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-cloud-arrow-down"></i> Add Subscription</h3>
+        <button class="btn-close" id="closeAddSubModalBtn">&times;</button>
+      </div>
+      <p class="text-muted text-sm" style="margin-bottom: 1rem;">Select a popular app from the directory to add it to your tracking list manually.</p>
+      
+      <div class="app-directory-grid">
+        <div class="app-directory-item" data-name="YouTube Premium" data-cost="13.99" data-category="Entertainment" data-icon="fa-youtube">
+          <i class="fa-brands fa-youtube icon"></i>
+          <span class="name">YouTube Premium</span>
+          <span class="cost">$13.99/mo</span>
+        </div>
+        <div class="app-directory-item" data-name="Spotify Premium" data-cost="10.99" data-category="Entertainment" data-icon="fa-spotify">
+          <i class="fa-brands fa-spotify icon"></i>
+          <span class="name">Spotify Premium</span>
+          <span class="cost">$10.99/mo</span>
+        </div>
+        <div class="app-directory-item" data-name="LinkedIn Premium" data-cost="39.99" data-category="Career" data-icon="fa-linkedin">
+          <i class="fa-brands fa-linkedin icon"></i>
+          <span class="name">LinkedIn Premium</span>
+          <span class="cost">$39.99/mo</span>
+        </div>
+        <div class="app-directory-item" data-name="Amazon Prime" data-cost="14.99" data-category="Shopping" data-icon="fa-amazon">
+          <i class="fa-brands fa-amazon icon"></i>
+          <span class="name">Amazon Prime</span>
+          <span class="cost">$14.99/mo</span>
+        </div>
+        <div class="app-directory-item" data-name="Midjourney AI" data-cost="30.00" data-category="Creative" data-icon="fa-image">
+          <i class="fa-solid fa-image icon"></i>
+          <span class="name">Midjourney AI</span>
+          <span class="cost">$30.00/mo</span>
+        </div>
+        <div class="app-directory-item" data-name="Audible" data-cost="14.95" data-category="Information" data-icon="fa-book-open">
+          <i class="fa-solid fa-book-open icon"></i>
+          <span class="name">Audible</span>
+          <span class="cost">$14.95/mo</span>
+        </div>
+      </div>
+    </div>
   </div>
 </body>
 </html>

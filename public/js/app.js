@@ -418,19 +418,43 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   // 6. Subscription Auditor
   // ==========================================
+  // ==========================================
+  // 6. Subscription Auditor
+  // ==========================================
+  let subscriptionsList = [];
+
+  const addSubModal = document.getElementById('addSubModal');
+  const openAddSubModalBtn = document.getElementById('openAddSubModalBtn');
+  const closeAddSubModalBtn = document.getElementById('closeAddSubModalBtn');
+
   async function loadSubscriptions() {
     try {
       const response = await fetch('/api/subscriptions');
       const data = await response.json();
 
       if (data.success) {
-        monthlySpendElement.textContent = `$${data.totalMonthlySpend}`;
-        document.querySelector('.trend.green').textContent = `Potential -$${data.potentialSavings}/mo saved`;
-        renderSubscriptions(data.subscriptions);
+        subscriptionsList = data.subscriptions;
+        updateSubscriptionsUI();
       }
     } catch (e) {
       console.error('Failed to load subscriptions:', e);
     }
+  }
+
+  function updateSubscriptionsUI() {
+    const total = subscriptionsList.reduce((sum, item) => sum + parseFloat(item.cost), 0).toFixed(2);
+    const savings = subscriptionsList
+      .filter(item => item.recommendation.toLowerCase().includes('cancel'))
+      .reduce((sum, item) => sum + parseFloat(item.cost), 0).toFixed(2);
+
+    monthlySpendElement.textContent = `$${total}`;
+    
+    const savingsText = document.querySelector('.metric-card .trend.green');
+    if (savingsText) {
+      savingsText.innerHTML = `<i class="fa-solid fa-arrow-trend-down"></i> Potential -$${savings}/mo saved`;
+    }
+
+    renderSubscriptions(subscriptionsList);
   }
 
   function renderSubscriptions(subs) {
@@ -507,6 +531,51 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
+
+  // Open Modal
+  if (openAddSubModalBtn) {
+    openAddSubModalBtn.addEventListener('click', () => {
+      addSubModal.classList.remove('hidden');
+    });
+  }
+
+  // Close Modal
+  if (closeAddSubModalBtn) {
+    closeAddSubModalBtn.addEventListener('click', () => {
+      addSubModal.classList.add('hidden');
+    });
+  }
+
+  // Directory Selection logic
+  document.querySelectorAll('.app-directory-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const name = item.getAttribute('data-name');
+      const cost = parseFloat(item.getAttribute('data-cost'));
+      const category = item.getAttribute('data-category');
+
+      // Generate random usage scores
+      const usageIndex = Math.floor(Math.random() * 40) + 5; // typical low usage range
+      const valueScore = Math.floor(Math.random() * 30) + 10;
+      
+      let recommendation = 'Cancel';
+      if (usageIndex > 30) recommendation = 'Review';
+
+      const newSub = {
+        id: 'sub-' + Date.now(),
+        name,
+        cost,
+        category,
+        usageIndex,
+        valueScore,
+        recommendation
+      };
+
+      // Add to array, close modal and update
+      subscriptionsList.push(newSub);
+      updateSubscriptionsUI();
+      addSubModal.classList.add('hidden');
+    });
+  });
 
   closeCancelBtn.addEventListener('click', () => {
     cancelAssistant.classList.add('hidden');
