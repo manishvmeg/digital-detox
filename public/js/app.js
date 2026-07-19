@@ -1,7 +1,8 @@
 /**
  * public/js/app.js
- * Main client-side orchestrator for the Clarity Cognitive Load Dashboard.
- * Connects SSE streams, manages tabs, triggers AI endpoints, and controls the audio synthesizer.
+ * Main client-side orchestrator for the Stillpoint Dashboard.
+ * Integrates tabs, Google OAuth state, SSE Notification streams, subscription scanning,
+ * binaural focus audio synthesizer, and the searchable 100+ App Directory catalog.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -14,34 +15,40 @@ document.addEventListener('DOMContentLoaded', () => {
   let rawNotifications = [];
   let sseEventSource = null;
   let zenInterval = null;
-  let zenTimer = null;
   let isZenSessionActive = false;
 
-  // DOM Elements
-  const tabLinks = document.querySelectorAll('.tab-link');
+  // Tabs / Navigation
+  const navItems = document.querySelectorAll('.nav-item');
   const tabContents = document.querySelectorAll('.tab-content');
+
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      navItems.forEach(nav => nav.classList.remove('active'));
+      tabContents.forEach(tc => tc.classList.remove('active'));
+
+      item.classList.add('active');
+      const tabId = item.getAttribute('data-tab');
+      const targetContent = document.getElementById(tabId);
+      if (targetContent) targetContent.classList.add('active');
+    });
+  });
+
+  // DOM Elements
   const rawFeedContainer = document.getElementById('rawNotificationsFeed');
   const triageBtn = document.getElementById('triageBtn');
   const clearTriageBtn = document.getElementById('clearTriageBtn');
   
-  // Lanes
+  // Triage Lanes
   const focusLane = document.getElementById('focusLaneItems');
   const digestLane = document.getElementById('digestLaneItems');
   const muteLane = document.getElementById('muteLaneItems');
-  const focusCount = document.getElementById('focusLaneCount');
-  const digestCount = document.getElementById('digestLaneCount');
-  const muteCount = document.getElementById('muteLaneCount');
   
-  // Metrics & Gauges
+  // Dashboard Metrics
   const cogScoreElement = document.getElementById('cognitiveLoadScore');
   const cogStatusElement = document.getElementById('loadStatus');
   const distractionsCountElement = document.getElementById('distractionsCount');
   const monthlySpendElement = document.getElementById('monthlySpend');
   const gaugeBar = document.getElementById('gaugeBar');
-
-  // Integrations
-  const claudeToggle = document.getElementById('claudeToggle');
-  const claudeStatus = document.getElementById('claudeStatus');
 
   // Zen Space
   const breathingRing = document.getElementById('breathingRing');
@@ -51,14 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const pinkBtn = document.getElementById('pinkNoiseBtn');
   const volumeSlider = document.getElementById('volumeControl');
 
-  // Decisions
-  const resolveDecisionBtn = document.getElementById('resolveDecisionBtn');
-  const dilemmaInput = document.getElementById('dilemmaInput');
-  const frameworkSelect = document.getElementById('frameworkSelect');
-  const decResultsCard = document.getElementById('decisionResultsCard');
-  const decPlaceholder = document.getElementById('decisionResultsPlaceholder');
-  const decContent = document.getElementById('decisionResultsContent');
-
   // Subscriptions
   const refreshSubsBtn = document.getElementById('refreshSubsBtn');
   const subsTableBody = document.getElementById('subscriptionsTableBody');
@@ -67,71 +66,46 @@ document.addEventListener('DOMContentLoaded', () => {
   const cancelEmailTextarea = document.getElementById('cancellationEmailContent');
   const copyEmailBtn = document.getElementById('copyEmailBtn');
   const sendMailBtn = document.getElementById('sendMailBtn');
+  const addSubModal = document.getElementById('addSubModal');
+  const openAddSubModalBtn = document.getElementById('openAddSubModalBtn');
+  const closeAddSubModalBtn = document.getElementById('closeAddSubModalBtn');
+
+  // Decisions (Vault)
+  const resolveDecisionBtn = document.getElementById('resolveDecisionBtn');
+  const dilemmaInput = document.getElementById('dilemmaInput');
+  const decResultsCard = document.getElementById('decisionResultsCard');
+  const decPlaceholder = document.getElementById('decisionResultsPlaceholder');
+  const decContent = document.getElementById('decisionResultsContent');
 
   // ==========================================
-  // 1. Tab Navigation & System Initialization
-  // ==========================================
-  tabLinks.forEach(link => {
-    link.addEventListener('click', () => {
-      tabLinks.forEach(l => l.classList.remove('active'));
-      tabContents.forEach(c => c.classList.remove('active'));
-      
-      link.classList.add('active');
-      const tabId = link.getAttribute('data-tab');
-      document.getElementById(tabId).classList.add('active');
-    });
-  });
-
-  // Check Local Session Mode Toggles
-  if (localStorage.getItem('clarity_claude_active') === 'true') {
-    claudeToggle.checked = true;
-    claudeStatus.textContent = 'API Live';
-    claudeStatus.style.color = 'var(--accent-success)';
-  }
-
-  // Handle Claude Integration Toggle (switches UI Mode for AI requests)
-  claudeToggle.addEventListener('change', (e) => {
-    const isChecked = e.target.checked;
-    localStorage.setItem('clarity_claude_active', isChecked);
-    if (isChecked) {
-      claudeStatus.textContent = 'API Live';
-      claudeStatus.style.color = 'var(--accent-success)';
-      alert('Claude API Live Mode Selected! Make sure process.env.ANTHROPIC_API_KEY is configured on your server.');
-    } else {
-      claudeStatus.textContent = 'Mock Mode';
-      claudeStatus.style.color = 'var(--text-muted)';
-    }
-  });
-
-  // ==========================================
-  // 2. Authentication UI Updates
+  // 1. Google Authentication Callback UI sync
   // ==========================================
   function updateUserUI(user, mode) {
     const loginSection = document.getElementById('googleSignInBtn');
     const profileSection = document.getElementById('userProfile');
     
     if (user) {
-      loginSection.classList.add('hidden');
-      profileSection.classList.remove('hidden');
-      document.getElementById('userAvatar').src = user.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde';
-      document.getElementById('userName').textContent = user.givenName || user.name;
-      
-      const badge = document.getElementById('authMode');
-      badge.textContent = mode === 'live' ? 'Google Auth' : 'Sandbox';
-      badge.style.background = mode === 'live' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(99, 102, 241, 0.15)';
-      badge.style.color = mode === 'live' ? 'var(--accent-success)' : 'var(--accent-primary)';
+      if (loginSection) loginSection.classList.add('hidden');
+      if (profileSection) {
+        profileSection.classList.remove('hidden');
+        document.getElementById('userAvatar').src = user.picture || '';
+        document.getElementById('userName').textContent = user.givenName || user.name;
+      }
     } else {
-      loginSection.classList.remove('hidden');
-      profileSection.classList.add('hidden');
+      if (loginSection) loginSection.classList.remove('hidden');
+      if (profileSection) profileSection.classList.add('hidden');
     }
   }
 
-  document.getElementById('logoutBtn').addEventListener('click', () => {
-    auth.logout();
-  });
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      auth.logout();
+    });
+  }
 
   // ==========================================
-  // 3. Real-Time Stream (SSE client)
+  // 2. Real-Time Notification Stream (SSE)
   // ==========================================
   function startNotificationStream() {
     if (sseEventSource) return;
@@ -145,38 +119,32 @@ document.addEventListener('DOMContentLoaded', () => {
         rawNotifications = payload.data;
         renderRawFeed();
       } else if (payload.type === 'new_message') {
-        // Prevent buffer bloat
-        if (rawNotifications.length >= 10) {
+        if (rawNotifications.length >= 8) {
           rawNotifications.pop();
         }
         rawNotifications.unshift(payload.data);
         renderRawFeed();
-        
-        // Flash metric and increment count
-        distractionsCountElement.textContent = rawNotifications.length;
-        recalculateAttentionMetrics();
+        calculateNoiseSum();
       }
-    };
-
-    sseEventSource.onerror = (err) => {
-      console.error('[SSE connection failed]: Stream disconnected. Reconnecting...');
     };
   }
 
   function renderRawFeed() {
+    if (!rawFeedContainer) return;
+
     if (rawNotifications.length === 0) {
       rawFeedContainer.innerHTML = `
         <div class="feed-placeholder">
-          <i class="fa-solid fa-circle-check" style="color: var(--accent-success);"></i>
+          <i class="fa-solid fa-face-smile" style="color: var(--accent-green);"></i>
           <p>No incoming digital distractions. Safe zone.</p>
         </div>`;
       return;
     }
 
     rawFeedContainer.innerHTML = rawNotifications.map(item => `
-      <div class="feed-item" data-id="${item.id}">
+      <div class="feed-item">
         <div class="feed-item-header">
-          <span class="feed-item-source"><i class="fa-solid fa-satellite"></i> ${item.source}</span>
+          <span class="feed-item-source">${item.source}</span>
           <span class="feed-item-time">${item.timestamp}</span>
         </div>
         <div class="feed-item-sender">${item.sender}</div>
@@ -185,56 +153,51 @@ document.addEventListener('DOMContentLoaded', () => {
     `).join('');
   }
 
-  // Start feed instantly
   startNotificationStream();
 
   // ==========================================
-  // 4. AI Cognitive Triage
+  // 3. AI Cognitive Triage Lanes
   // ==========================================
-  triageBtn.addEventListener('click', async () => {
-    if (rawNotifications.length === 0) {
-      alert('Your raw digital firehose is empty. Nothing to triage.');
-      return;
-    }
-
-    triageBtn.disabled = true;
-    triageBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Organizing Triage Lanes...`;
-
-    try {
-      const response = await fetch('/api/triage/analyze', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ items: rawNotifications })
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        // Distribute triaged responses to lanes
-        distributeToLanes(result.triaged);
-        
-        // Empty raw bucket
-        rawNotifications = [];
-        renderRawFeed();
-        distractionsCountElement.textContent = 0;
-        
-        recalculateAttentionMetrics();
-      } else {
-        alert('Triage analysis failed: ' + result.message);
+  if (triageBtn) {
+    triageBtn.addEventListener('click', async () => {
+      if (rawNotifications.length === 0) {
+        alert('Digital firehose is empty. Nothing to triage.');
+        return;
       }
-    } catch (e) {
-      console.error(e);
-      alert('Unable to reach AI Triage Endpoint. Running local heuristics.');
-    } finally {
-      triageBtn.disabled = false;
-      triageBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Run AI Cognitive Triage`;
-    }
-  });
+
+      triageBtn.disabled = true;
+      triageBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Analyzing...`;
+
+      try {
+        const response = await fetch('/api/triage/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ items: rawNotifications })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          distributeToLanes(result.triaged);
+          rawNotifications = [];
+          renderRawFeed();
+          calculateNoiseSum();
+        }
+      } catch (e) {
+        console.error(e);
+        alert('Triage connection error. Please try again.');
+      } finally {
+        triageBtn.disabled = false;
+        triageBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> Run AI Cognitive Triage`;
+      }
+    });
+  }
 
   function distributeToLanes(items) {
-    // Clear placeholders
+    if (!focusLane || !digestLane || !muteLane) return;
+
     focusLane.innerHTML = '';
     digestLane.innerHTML = '';
     muteLane.innerHTML = '';
@@ -243,101 +206,89 @@ document.addEventListener('DOMContentLoaded', () => {
     const digestList = items.filter(x => x.lane === 'digest');
     const muteList = items.filter(x => x.lane === 'mute');
 
-    // Update Counts
-    focusCount.textContent = focusList.length;
-    digestCount.textContent = digestList.length;
-    muteCount.textContent = muteList.length;
-
-    // Render focus lane
     if (focusList.length > 0) {
-      focusLane.innerHTML = focusList.map(item => createLaneItemHtml(item, 'danger')).join('');
+      focusLane.innerHTML = focusList.map(item => createLaneItemHtml(item)).join('');
     } else {
-      focusLane.innerHTML = `<div class="lane-placeholder">0 Urgent tasks</div>`;
+      focusLane.innerHTML = `<div class="lane-placeholder">0 Urgent actions</div>`;
     }
 
-    // Render digest lane
     if (digestList.length > 0) {
-      digestLane.innerHTML = digestList.map(item => createLaneItemHtml(item, 'info')).join('');
+      digestLane.innerHTML = digestList.map(item => createLaneItemHtml(item)).join('');
     } else {
-      digestLane.innerHTML = `<div class="lane-placeholder">0 Pending newsletters</div>`;
+      digestLane.innerHTML = `<div class="lane-placeholder">0 Digests</div>`;
     }
 
-    // Render mute lane
     if (muteList.length > 0) {
-      muteLane.innerHTML = muteList.map(item => createLaneItemHtml(item, 'muted')).join('');
+      muteLane.innerHTML = muteList.map(item => createLaneItemHtml(item)).join('');
     } else {
-      muteLane.innerHTML = `<div class="lane-placeholder">0 Silenced streams</div>`;
+      muteLane.innerHTML = `<div class="lane-placeholder">0 Muted items</div>`;
     }
   }
 
-  function createLaneItemHtml(item, statusClass) {
+  function createLaneItemHtml(item) {
     return `
-      <div class="triaged-item" data-id="${item.id}">
-        <div class="triaged-item-title">
-          <span>${item.sender} (${item.source})</span>
-          <span class="weight-label">W: ${item.cognitiveWeight || 2}</span>
-        </div>
-        <div class="triaged-item-summary">${item.summary}</div>
-        <div class="triaged-item-action">
-          <i class="fa-solid fa-bolt"></i> ${item.actionItem}
-        </div>
+      <div class="triaged-item">
+        <div class="triaged-item-summary"><strong>${item.sender}</strong>: ${item.summary}</div>
+        <div class="triaged-item-action"><i class="fa-solid fa-bolt"></i> ${item.actionItem}</div>
       </div>
     `;
   }
 
-  clearTriageBtn.addEventListener('click', () => {
-    focusLane.innerHTML = `<div class="lane-placeholder">Critical actionable items appear here</div>`;
-    digestLane.innerHTML = `<div class="lane-placeholder">General updates and newsletters</div>`;
-    muteLane.innerHTML = `<div class="lane-placeholder">Chat clutter and spam silenced</div>`;
-    focusCount.textContent = 0;
-    digestCount.textContent = 0;
-    muteCount.textContent = 0;
-    recalculateAttentionMetrics();
-  });
+  if (clearTriageBtn) {
+    clearTriageBtn.addEventListener('click', () => {
+      focusLane.innerHTML = `<div class="lane-placeholder">Urgent items appear here</div>`;
+      digestLane.innerHTML = `<div class="lane-placeholder">Muted newsletter/digests</div>`;
+      muteLane.innerHTML = `<div class="lane-placeholder">Spam automatically silenced</div>`;
+      calculateNoiseSum();
+    });
+  }
 
-  // Dynamic Attention Index Recalculator
+  // Recalculates Cognitive Load index
   function recalculateAttentionMetrics() {
-    let rawWeight = rawNotifications.length * 5;
+    let rawWeight = rawNotifications.length * 4;
     
     // Count active items in triage lanes
     const activeFocus = document.querySelectorAll('#focusLaneItems .triaged-item').length;
     const activeDigest = document.querySelectorAll('#digestLaneItems .triaged-item').length;
     
-    let totalStress = rawWeight + (activeFocus * 15) + (activeDigest * 4);
-    let index = Math.max(10, 100 - totalStress);
+    // Count app noise volume
+    const activeNoise = noiseApps.filter(a => !a.muted).reduce((sum, a) => sum + a.dailyCount, 0);
 
-    cogScoreElement.textContent = index;
+    let totalStress = rawWeight + (activeFocus * 15) + (activeDigest * 4) + (activeNoise * 0.25);
+    let index = Math.max(10, Math.round(100 - totalStress));
 
-    // SVG Gauge DashOffset calc (282.6 is full circumference)
-    // 100 index -> offset 0, 0 index -> offset 282.6
-    const offset = 282.6 - (282.6 * index) / 100;
-    gaugeBar.style.strokeDashoffset = offset;
+    if (cogScoreElement) cogScoreElement.textContent = index;
 
-    // Apply color states to index and gauge
-    if (index > 75) {
-      cogStatusElement.textContent = 'Zen Focus';
-      cogStatusElement.className = 'badge success';
-      gaugeBar.style.stroke = 'var(--accent-success)';
-    } else if (index > 45) {
-      cogStatusElement.textContent = 'Fatigued';
-      cogStatusElement.className = 'badge warning';
-      gaugeBar.style.stroke = 'var(--accent-warning)';
-    } else {
-      cogStatusElement.textContent = 'Cognitive Lock';
-      cogStatusElement.className = 'badge alert';
-      gaugeBar.style.stroke = 'var(--accent-danger)';
+    if (gaugeBar) {
+      const offset = 282.6 - (282.6 * index) / 100;
+      gaugeBar.style.strokeDashoffset = offset;
+    }
+
+    if (cogStatusElement) {
+      if (index > 75) {
+        cogStatusElement.textContent = 'Zen Focus';
+        cogStatusElement.className = 'status-indicator success';
+        if (gaugeBar) gaugeBar.style.stroke = 'var(--accent-green)';
+      } else if (index > 45) {
+        cogStatusElement.textContent = 'Moderate Fatigue';
+        cogStatusElement.className = 'status-indicator warning';
+        if (gaugeBar) gaugeBar.style.stroke = 'var(--accent-yellow)';
+      } else {
+        cogStatusElement.textContent = 'Cognitive Lock';
+        cogStatusElement.className = 'status-indicator alert';
+        if (gaugeBar) gaugeBar.style.stroke = 'var(--accent-red)';
+      }
     }
   }
 
-  // Initial calculation
-  recalculateAttentionMetrics();
-
   // ==========================================
-  // 5. Zen Focus Session
+  // 4. Zen Focus Space (Audio Synth)
   // ==========================================
   let breathState = 'in';
 
   function runBreathingInterval() {
+    if (!breathingRing || !breathingText) return;
+    
     if (breathState === 'in') {
       breathingRing.classList.remove('breathing-out');
       breathingRing.classList.add('breathing-in');
@@ -354,78 +305,78 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  startZenBtn.addEventListener('click', () => {
-    isZenSessionActive = !isZenSessionActive;
+  if (startZenBtn) {
+    startZenBtn.addEventListener('click', () => {
+      isZenSessionActive = !isZenSessionActive;
 
-    if (isZenSessionActive) {
-      startZenBtn.innerHTML = `<i class="fa-solid fa-stop"></i> Terminate Session`;
-      startZenBtn.style.background = 'var(--accent-danger)';
-      
-      // Start Breathing Circle Cycle (4s transitions)
-      breathState = 'in';
-      runBreathingInterval();
-      zenInterval = setInterval(runBreathingInterval, 4000);
-      
-      // Play Binaural sound as baseline
-      audioSynth.toggleThetaBeats();
-      thetaBtn.classList.add('playing');
-      
-      // Adjust system metrics to reflect screen isolation
-      cogScoreElement.textContent = 98;
-      gaugeBar.style.strokeDashoffset = 282.6 - (282.6 * 98) / 100;
-      gaugeBar.style.stroke = 'var(--accent-success)';
-      cogStatusElement.textContent = 'Screen Safe';
-      cogStatusElement.className = 'badge success';
-    } else {
-      clearInterval(zenInterval);
-      audioSynth.stop();
-      thetaBtn.classList.remove('playing');
-      pinkBtn.classList.remove('playing');
-      
-      breathingRing.className = 'breathing-ring';
-      breathingText.textContent = 'Focus';
-      startZenBtn.innerHTML = `<i class="fa-solid fa-play"></i> Start 25m Focus Block`;
-      startZenBtn.style.background = 'var(--accent-primary)';
-      
-      recalculateAttentionMetrics();
-    }
-  });
+      if (isZenSessionActive) {
+        startZenBtn.innerHTML = `<i class="fa-solid fa-stop"></i> End Session`;
+        startZenBtn.style.background = 'var(--accent-red)';
+        
+        // Start Breathing Cycle
+        breathState = 'in';
+        runBreathingInterval();
+        zenInterval = setInterval(runBreathingInterval, 4000);
+        
+        // Play Binaural sound
+        audioSynth.toggleThetaBeats();
+        thetaBtn.classList.add('playing');
+        
+        if (cogScoreElement) cogScoreElement.textContent = 98;
+        if (gaugeBar) {
+          gaugeBar.style.strokeDashoffset = 282.6 - (282.6 * 98) / 100;
+          gaugeBar.style.stroke = 'var(--accent-green)';
+        }
+        if (cogStatusElement) {
+          cogStatusElement.textContent = 'Focus Lock';
+          cogStatusElement.className = 'status-indicator success';
+        }
+        document.getElementById('activeZenSessions').textContent = 'Active (25m)';
+      } else {
+        clearInterval(zenInterval);
+        audioSynth.stop();
+        thetaBtn.classList.remove('playing');
+        pinkBtn.classList.remove('playing');
+        
+        if (breathingRing) breathingRing.className = 'breathing-ring';
+        if (breathingText) breathingText.textContent = 'Focus';
+        startZenBtn.innerHTML = `<i class="fa-solid fa-play"></i> Start 25m Focus Block`;
+        startZenBtn.style.background = 'var(--btn-dark)';
+        
+        document.getElementById('activeZenSessions').textContent = 'Ready';
+        recalculateAttentionMetrics();
+      }
+    });
+  }
 
-  thetaBtn.addEventListener('click', () => {
-    const isPlaying = audioSynth.toggleThetaBeats();
-    pinkBtn.classList.remove('playing');
-    if (isPlaying) {
-      thetaBtn.classList.add('playing');
-    } else {
-      thetaBtn.classList.remove('playing');
-    }
-  });
+  if (thetaBtn) {
+    thetaBtn.addEventListener('click', () => {
+      const isPlaying = audioSynth.toggleThetaBeats();
+      if (pinkBtn) pinkBtn.classList.remove('playing');
+      if (isPlaying) thetaBtn.classList.add('playing');
+      else thetaBtn.classList.remove('playing');
+    });
+  }
 
-  pinkBtn.addEventListener('click', () => {
-    const isPlaying = audioSynth.togglePinkNoise();
-    thetaBtn.classList.remove('playing');
-    if (isPlaying) {
-      pinkBtn.classList.add('playing');
-    } else {
-      pinkBtn.classList.remove('playing');
-    }
-  });
+  if (pinkBtn) {
+    pinkBtn.addEventListener('click', () => {
+      const isPlaying = audioSynth.togglePinkNoise();
+      if (thetaBtn) thetaBtn.classList.remove('playing');
+      if (isPlaying) pinkBtn.classList.add('playing');
+      else pinkBtn.classList.remove('playing');
+    });
+  }
 
-  volumeSlider.addEventListener('input', (e) => {
-    audioSynth.setVolume(e.target.value);
-  });
+  if (volumeSlider) {
+    volumeSlider.addEventListener('input', (e) => {
+      audioSynth.setVolume(e.target.value);
+    });
+  }
 
   // ==========================================
-  // 6. Subscription Auditor
-  // ==========================================
-  // ==========================================
-  // 6. Subscription Auditor
+  // 5. Subscription Auditor (MONEY)
   // ==========================================
   let subscriptionsList = [];
-
-  const addSubModal = document.getElementById('addSubModal');
-  const openAddSubModalBtn = document.getElementById('openAddSubModalBtn');
-  const closeAddSubModalBtn = document.getElementById('closeAddSubModalBtn');
 
   async function loadSubscriptions() {
     try {
@@ -443,24 +394,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateSubscriptionsUI() {
     const total = subscriptionsList.reduce((sum, item) => sum + parseFloat(item.cost), 0).toFixed(2);
-    const savings = subscriptionsList
-      .filter(item => item.recommendation.toLowerCase().includes('cancel'))
-      .reduce((sum, item) => sum + parseFloat(item.cost), 0).toFixed(2);
-
-    monthlySpendElement.textContent = `$${total}`;
-    
-    const savingsText = document.querySelector('.metric-card .trend.green');
-    if (savingsText) {
-      savingsText.innerHTML = `<i class="fa-solid fa-arrow-trend-down"></i> Potential -$${savings}/mo saved`;
-    }
-
+    if (monthlySpendElement) monthlySpendElement.textContent = `$${total}`;
     renderSubscriptions(subscriptionsList);
   }
 
   function renderSubscriptions(subs) {
+    if (!subsTableBody) return;
+
     subsTableBody.innerHTML = subs.map(sub => {
       let recClass = 'success';
-      if (sub.recommendation.includes('Cancel')) recClass = 'danger';
+      if (sub.recommendation.includes('Cancel')) recClass = 'alert';
       else if (sub.recommendation.includes('Downgrade')) recClass = 'warning';
 
       let fillClass = 'high';
@@ -470,20 +413,19 @@ document.addEventListener('DOMContentLoaded', () => {
       return `
         <tr>
           <td><strong>${sub.name}</strong><br><small class="text-muted">${sub.category}</small></td>
-          <td>$${sub.cost.toFixed(2)} / mo</td>
+          <td>$${sub.cost.toFixed(2)}</td>
           <td>
             <div class="progress-bar">
               <div class="progress-fill ${fillClass}" style="width: ${sub.usageIndex}%"></div>
             </div>
-            <small class="text-muted">${sub.usageIndex}% active logs</small>
+            <small class="text-muted">${sub.usageIndex}% active</small>
           </td>
-          <td><strong>${sub.valueScore} / 100</strong></td>
-          <td><span class="badge ${recClass}">${sub.recommendation}</span></td>
+          <td><strong>${sub.valueScore}/100</strong></td>
           <td>
             ${sub.recommendation.toLowerCase().includes('keep') 
-              ? `<button class="btn btn-sm btn-outline" disabled>Optimized</button>`
-              : `<button class="btn btn-sm btn-accent cancel-btn" data-name="${sub.name}" data-cost="${sub.cost}" data-category="${sub.category}">
-                  <i class="fa-solid fa-envelope"></i> Draft Cancel
+              ? `<span class="status-indicator success">Keep</span>`
+              : `<button class="btn btn-sm btn-dark cancel-btn" data-name="${sub.name}" data-cost="${sub.cost}" data-category="${sub.category}">
+                  Cancel Assistant
                  </button>`
             }
           </td>
@@ -491,7 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }).join('');
 
-    // Attach cancellation event listeners
+    // Attach click listeners to cancellation helper buttons
     document.querySelectorAll('.cancel-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const item = e.currentTarget;
@@ -499,11 +441,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const cost = item.getAttribute('data-cost');
         const category = item.getAttribute('data-category');
 
-        cancelAssistant.classList.remove('hidden');
-        cancelEmailTextarea.value = "Generating custom cancellation email via Claude 3.5 Sonnet...";
-        
-        // Scroll to assistant
-        cancelAssistant.scrollIntoView({ behavior: 'smooth' });
+        if (cancelAssistant) {
+          cancelAssistant.classList.remove('hidden');
+          cancelEmailTextarea.value = "Requesting email copy draft from Claude...";
+          cancelAssistant.scrollIntoView({ behavior: 'smooth' });
+        }
 
         try {
           const res = await fetch('/api/subscriptions/cancel-email', {
@@ -515,157 +457,281 @@ document.addEventListener('DOMContentLoaded', () => {
           });
           const data = await res.json();
           
-          if (data.success) {
+          if (data.success && cancelEmailTextarea) {
             cancelEmailTextarea.value = data.email;
             
-            // Build mailto links dynamically
-            const subject = encodeURIComponent(`Request for Account Cancellation: ${name}`);
+            const subject = encodeURIComponent(`Cancellation Request: ${name}`);
             const body = encodeURIComponent(data.email);
-            sendMailBtn.href = `mailto:support@${name.toLowerCase().replace(/\s+/g, '')}.com?subject=${subject}&body=${body}`;
-          } else {
-            cancelEmailTextarea.value = "Error generating cancellation copy: " + data.message;
+            if (sendMailBtn) sendMailBtn.href = `mailto:support@${name.toLowerCase().replace(/\s+/g, '')}.com?subject=${subject}&body=${body}`;
           }
         } catch (err) {
-          cancelEmailTextarea.value = "Fallback error generating copy. Please copy/paste manually.";
+          if (cancelEmailTextarea) cancelEmailTextarea.value = "Unable to generate draft.";
         }
       });
     });
   }
 
-  // Open Modal
+  // Sub Add Modal Toggles
   if (openAddSubModalBtn) {
     openAddSubModalBtn.addEventListener('click', () => {
-      addSubModal.classList.remove('hidden');
+      if (addSubModal) addSubModal.classList.remove('hidden');
     });
   }
 
-  // Close Modal
   if (closeAddSubModalBtn) {
     closeAddSubModalBtn.addEventListener('click', () => {
-      addSubModal.classList.add('hidden');
+      if (addSubModal) addSubModal.classList.add('hidden');
     });
   }
 
-  // Directory Selection logic
   document.querySelectorAll('.app-directory-item').forEach(item => {
     item.addEventListener('click', () => {
       const name = item.getAttribute('data-name');
       const cost = parseFloat(item.getAttribute('data-cost'));
       const category = item.getAttribute('data-category');
-
-      // Generate random usage scores
-      const usageIndex = Math.floor(Math.random() * 40) + 5; // typical low usage range
-      const valueScore = Math.floor(Math.random() * 30) + 10;
       
-      let recommendation = 'Cancel';
-      if (usageIndex > 30) recommendation = 'Review';
-
       const newSub = {
         id: 'sub-' + Date.now(),
         name,
         cost,
         category,
-        usageIndex,
-        valueScore,
-        recommendation
+        usageIndex: 12,
+        valueScore: 20,
+        recommendation: 'Cancel'
       };
 
-      // Add to array, close modal and update
       subscriptionsList.push(newSub);
       updateSubscriptionsUI();
-      addSubModal.classList.add('hidden');
+      if (addSubModal) addSubModal.classList.add('hidden');
     });
   });
 
-  closeCancelBtn.addEventListener('click', () => {
-    cancelAssistant.classList.add('hidden');
-  });
+  if (closeCancelBtn) {
+    closeCancelBtn.addEventListener('click', () => {
+      if (cancelAssistant) cancelAssistant.classList.add('hidden');
+    });
+  }
 
-  copyEmailBtn.addEventListener('click', () => {
-    cancelEmailTextarea.select();
-    document.execCommand('copy');
-    alert('Cancellation template copied to clipboard!');
-  });
-
-  // Load Subscriptions dynamically on page build
-  loadSubscriptions();
-  refreshSubsBtn.addEventListener('click', loadSubscriptions);
-
-  // ==========================================
-  // 7. Decider AI
-  // ==========================================
-  resolveDecisionBtn.addEventListener('click', async () => {
-    const dilemma = dilemmaInput.value.trim();
-    if (!dilemma) {
-      alert('Please describe your dilemma before triggering evaluation.');
-      return;
-    }
-
-    resolveDecisionBtn.disabled = true;
-    resolveDecisionBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Resolving decision fatigue...`;
-    
-    decResultsPlaceholder.classList.add('hidden');
-    decContent.classList.add('hidden');
-
-    try {
-      const response = await fetch('/api/decisions/resolve', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          dilemma,
-          framework: frameworkSelect.value
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        const analysis = data.analysis;
-        
-        // Populate elements
-        document.getElementById('decisionRecommendation').textContent = analysis.recommendation;
-        document.getElementById('quadrantDisplay').textContent = analysis.eisenhowerQuadrant;
-        document.getElementById('urgencyValue').textContent = analysis.urgency;
-        document.getElementById('importanceValue').textContent = analysis.importance;
-        
-        document.getElementById('tenMinImpact').textContent = analysis.tenTenTen.minutes10;
-        document.getElementById('tenMonthImpact').textContent = analysis.tenTenTen.months10;
-        document.getElementById('tenYearImpact').textContent = analysis.tenTenTen.years10;
-        
-        document.getElementById('decisionNarrative').textContent = analysis.narrative;
-
-        // Visual Reveal
-        decContent.classList.remove('hidden');
-      } else {
-        decResultsPlaceholder.classList.remove('hidden');
-        alert('Failed to resolve decision: ' + data.message);
+  if (copyEmailBtn) {
+    copyEmailBtn.addEventListener('click', () => {
+      if (cancelEmailTextarea) {
+        cancelEmailTextarea.select();
+        document.execCommand('copy');
+        alert('Copied to clipboard!');
       }
-    } catch (e) {
-      console.error(e);
-      decResultsPlaceholder.classList.remove('hidden');
-      alert('Could not connect to Decider API node.');
-    } finally {
-      resolveDecisionBtn.disabled = false;
-      resolveDecisionBtn.innerHTML = `<i class="fa-solid fa-microchip"></i> Analyze Dilemma with Claude`;
-    }
-  });
+    });
+  }
+
+  loadSubscriptions();
+  if (refreshSubsBtn) refreshSubsBtn.addEventListener('click', loadSubscriptions);
 
   // ==========================================
-  // 8. App Noise Auditor
+  // 6. Decider AI (VAULT)
   // ==========================================
+  if (resolveDecisionBtn) {
+    resolveDecisionBtn.addEventListener('click', async () => {
+      const dilemma = dilemmaInput.value.trim();
+      if (!dilemma) {
+        alert('Please describe your dilemma.');
+        return;
+      }
+
+      resolveDecisionBtn.disabled = true;
+      resolveDecisionBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Resolving...`;
+      
+      if (decPlaceholder) decPlaceholder.classList.add('hidden');
+      if (decContent) decContent.classList.add('hidden');
+
+      try {
+        const response = await fetch('/api/decisions/resolve', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ dilemma })
+        });
+
+        const data = await response.json();
+
+        if (data.success && decContent) {
+          const analysis = data.analysis;
+          
+          document.getElementById('decisionRecommendation').textContent = analysis.recommendation;
+          document.getElementById('quadrantDisplay').textContent = analysis.eisenhowerQuadrant;
+          document.getElementById('tenMinImpact').textContent = analysis.tenTenTen.minutes10;
+          document.getElementById('tenMonthImpact').textContent = analysis.tenTenTen.months10;
+          document.getElementById('tenYearImpact').textContent = analysis.tenTenTen.years10;
+          document.getElementById('decisionNarrative').textContent = analysis.narrative;
+
+          decContent.classList.remove('hidden');
+        }
+      } catch (e) {
+        console.error(e);
+        if (decPlaceholder) decPlaceholder.classList.remove('hidden');
+        alert('Decider engine error.');
+      } finally {
+        resolveDecisionBtn.disabled = false;
+        resolveDecisionBtn.innerHTML = `<i class="fa-solid fa-microchip"></i> Resolve Dilemma with Claude`;
+      }
+    });
+  }
+
+  // ==========================================
+  // 7. Searchable App Directory (NOISE)
+  // ==========================================
+  const appCatalog = [
+    // Games
+    { name: 'PUBG Mobile', category: 'Game', avgNotifications: 150 },
+    { name: 'Free Fire', category: 'Game', avgNotifications: 180 },
+    { name: 'Roblox', category: 'Game', avgNotifications: 60 },
+    { name: 'Candy Crush Saga', category: 'Game', avgNotifications: 25 },
+    { name: 'Clash of Clans', category: 'Game', avgNotifications: 45 },
+    { name: 'Subway Surfers', category: 'Game', avgNotifications: 15 },
+    { name: 'Among Us', category: 'Game', avgNotifications: 10 },
+    { name: 'Minecraft', category: 'Game', avgNotifications: 5 },
+    { name: 'Call of Duty Mobile', category: 'Game', avgNotifications: 110 },
+    { name: 'Clash Royale', category: 'Game', avgNotifications: 50 },
+    { name: 'Brawl Stars', category: 'Game', avgNotifications: 40 },
+    { name: 'Temple Run 2', category: 'Game', avgNotifications: 8 },
+    { name: 'Angry Birds 2', category: 'Game', avgNotifications: 12 },
+    { name: 'Genshin Impact', category: 'Game', avgNotifications: 30 },
+    { name: 'Pokemon GO', category: 'Game', avgNotifications: 75 },
+    { name: 'Asphalt 9', category: 'Game', avgNotifications: 65 },
+    { name: 'Ludo King', category: 'Game', avgNotifications: 20 },
+    { name: 'Fruit Ninja', category: 'Game', avgNotifications: 5 },
+    { name: 'Hill Climb Racing', category: 'Game', avgNotifications: 15 },
+    { name: 'Sonic Dash', category: 'Game', avgNotifications: 10 },
+    { name: 'Monopoly Go', category: 'Game', avgNotifications: 85 },
+    { name: '8 Ball Pool', category: 'Game', avgNotifications: 30 },
+    { name: 'EA Sports FC Mobile', category: 'Game', avgNotifications: 70 },
+    { name: 'Plants vs Zombies', category: 'Game', avgNotifications: 15 },
+    { name: 'Mobile Legends', category: 'Game', avgNotifications: 95 },
+    
+    // Social / Chat
+    { name: 'WhatsApp', category: 'Social', avgNotifications: 250 },
+    { name: 'Instagram', category: 'Social', avgNotifications: 180 },
+    { name: 'Snapchat', category: 'Social', avgNotifications: 140 },
+    { name: 'TikTok', category: 'Social', avgNotifications: 190 },
+    { name: 'Discord', category: 'Social', avgNotifications: 120 },
+    { name: 'YouTube', category: 'Social', avgNotifications: 80 },
+    { name: 'Facebook', category: 'Social', avgNotifications: 90 },
+    { name: 'Telegram', category: 'Social', avgNotifications: 160 },
+    { name: 'Twitter / X', category: 'Social', avgNotifications: 110 },
+    { name: 'Reddit', category: 'Social', avgNotifications: 40 },
+    { name: 'Pinterest', category: 'Social', avgNotifications: 15 },
+    { name: 'LinkedIn', category: 'Social', avgNotifications: 35 },
+    { name: 'BeReal', category: 'Social', avgNotifications: 10 },
+
+    // Utilities / Tools
+    { name: 'Gmail', category: 'Utility', avgNotifications: 70 },
+    { name: 'Outlook', category: 'Utility', avgNotifications: 60 },
+    { name: 'Slack', category: 'Utility', avgNotifications: 130 },
+    { name: 'Microsoft Teams', category: 'Utility', avgNotifications: 110 },
+    { name: 'Google Calendar', category: 'Utility', avgNotifications: 15 },
+    { name: 'Notion', category: 'Utility', avgNotifications: 10 },
+    { name: 'Google Drive', category: 'Utility', avgNotifications: 5 }
+  ];
+
   let noiseApps = [
     { name: 'WhatsApp', category: 'Social', dailyCount: 120, muted: false },
     { name: 'Instagram', category: 'Social', dailyCount: 95, muted: false },
     { name: 'PUBG Mobile', category: 'Game', dailyCount: 35, muted: false }
   ];
 
+  // DOM elements for app directory
+  const noiseAppInput = document.getElementById('noiseAppInput');
+  const appDirectoryModal = document.getElementById('appDirectoryModal');
+  const closeAppDirModalBtn = document.getElementById('closeAppDirModalBtn');
+  const appCatalogSearch = document.getElementById('appCatalogSearch');
+  const appCatalogListContainer = document.getElementById('appCatalogListContainer');
   const addNoiseAppBtn = document.getElementById('addNoiseAppBtn');
-  const noiseAppSelect = document.getElementById('noiseAppSelect');
-  const notificationsCountInput = document.getElementById('notificationsCountInput');
   const noiseAppsListContainer = document.getElementById('noiseAppsListContainer');
+  const loudestAppHelper = document.getElementById('loudestAppHelper');
 
+  let activeCatalogFilter = 'all';
+  let catalogSearchQuery = '';
+
+  // Open catalog search modal
+  if (noiseAppInput) {
+    noiseAppInput.addEventListener('click', () => {
+      if (appDirectoryModal) {
+        appDirectoryModal.classList.remove('hidden');
+        renderCatalogList();
+        if (appCatalogSearch) appCatalogSearch.focus();
+      }
+    });
+  }
+
+  // Close catalog search modal
+  if (closeAppDirModalBtn) {
+    closeAppDirModalBtn.addEventListener('click', () => {
+      if (appDirectoryModal) appDirectoryModal.classList.add('hidden');
+    });
+  }
+
+  // Search input typing handler
+  if (appCatalogSearch) {
+    appCatalogSearch.addEventListener('input', (e) => {
+      catalogSearchQuery = e.target.value;
+      renderCatalogList();
+    });
+  }
+
+  // Filter chips click handling
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', (e) => {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      e.currentTarget.classList.add('active');
+      activeCatalogFilter = e.currentTarget.getAttribute('data-filter');
+      renderCatalogList();
+    });
+  });
+
+  function renderCatalogList() {
+    if (!appCatalogListContainer) return;
+
+    const filtered = appCatalog.filter(item => {
+      const matchesSearch = item.name.toLowerCase().includes(catalogSearchQuery.toLowerCase());
+      const matchesFilter = activeCatalogFilter === 'all' || item.category === activeCatalogFilter;
+      return matchesSearch && matchesFilter;
+    });
+
+    if (filtered.length === 0) {
+      appCatalogListContainer.innerHTML = `<div class="text-sm text-muted" style="padding: 1.5rem 0; text-align: center;">No matching apps or games found.</div>`;
+      return;
+    }
+
+    appCatalogListContainer.innerHTML = filtered.map(app => `
+      <div class="catalog-list-item" data-name="${app.name}" data-category="${app.category}" data-avg="${app.avgNotifications}">
+        <div>
+          <strong>${app.name}</strong><br>
+          <span class="meta">${app.category}</span>
+        </div>
+        <div>
+          <span class="badge success" style="background: rgba(35,34,30,0.06); color: var(--text-dark);">${app.avgNotifications}/day</span>
+        </div>
+      </div>
+    `).join('');
+
+    // Attach click triggers to catalog list items
+    document.querySelectorAll('.catalog-list-item').forEach(el => {
+      el.addEventListener('click', (e) => {
+        const name = el.getAttribute('data-name');
+        const category = el.getAttribute('data-category');
+        const avg = el.getAttribute('data-avg');
+
+        if (noiseAppInput) {
+          noiseAppInput.value = name;
+          noiseAppInput.setAttribute('data-category', category);
+          noiseAppInput.setAttribute('data-avg', avg);
+        }
+
+        if (appDirectoryModal) appDirectoryModal.classList.add('hidden');
+      });
+    });
+  }
+
+  // Render monitored noise apps
   function renderNoiseApps() {
     if (!noiseAppsListContainer) return;
 
@@ -673,18 +739,13 @@ document.addEventListener('DOMContentLoaded', () => {
       noiseAppsListContainer.innerHTML = `
         <div class="feed-placeholder">
           <i class="fa-solid fa-volume-xmark" style="color: var(--text-muted); font-size: 1.5rem;"></i>
-          <p>No noisy apps monitored. Safe attention zone.</p>
+          <p>No noisy apps configured. Safe attention zone.</p>
         </div>`;
-      const volumeStatus = document.getElementById('noiseVolumeStatus');
-      if (volumeStatus) {
-        volumeStatus.textContent = 'Silent';
-        volumeStatus.className = 'badge success';
-      }
       return;
     }
 
     noiseAppsListContainer.innerHTML = noiseApps.map((app, index) => {
-      const timeLost = app.dailyCount; // 1 min per notification
+      const timeLost = app.dailyCount;
       return `
         <div class="noise-app-item">
           <div class="noise-app-info">
@@ -699,7 +760,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <span class="noise-app-time">${app.muted ? '0m wasted' : `~${timeLost}m lost/day`}</span>
             </div>
             
-            <button class="btn btn-sm btn-outline mute-app-btn" data-index="${index}">
+            <button class="btn-mute-app mute-app-btn ${app.muted ? 'muted' : ''}" data-index="${index}">
               <i class="fa-solid ${app.muted ? 'fa-volume-high' : 'fa-volume-xmark'}"></i>
             </button>
             <button class="btn-delete-app delete-app-btn" data-index="${index}">
@@ -731,61 +792,62 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function calculateNoiseSum() {
-    const activeCount = noiseApps.filter(a => !a.muted).reduce((sum, a) => sum + a.dailyCount, 0);
-    
-    // Update dashboard indicator badge & number
-    const activeAppsCount = noiseApps.filter(a => !a.muted).length;
+    const activeApps = noiseApps.filter(a => !a.muted);
+    const activeCount = activeApps.reduce((sum, a) => sum + a.dailyCount, 0);
+
     if (distractionsCountElement) {
-      distractionsCountElement.textContent = activeAppsCount;
+      distractionsCountElement.textContent = activeApps.length;
     }
-    
-    const badge = document.getElementById('noiseVolumeStatus');
-    if (badge) {
-      if (activeCount > 150) {
-        badge.textContent = 'High Noise';
-        badge.className = 'badge alert';
-      } else if (activeCount > 50) {
-        badge.textContent = 'Loud Noise';
-        badge.className = 'badge warning';
-      } else {
-        badge.textContent = 'Quiet';
-        badge.className = 'badge success';
-      }
+
+    if (loudestAppHelper && activeApps.length > 0) {
+      // Find the loudest app
+      const loudest = activeApps.reduce((max, app) => (app.dailyCount > max.dailyCount ? app : max), activeApps[0]);
+      loudestAppHelper.textContent = `The loudest is ${loudest.name.toLowerCase()} at about ${loudest.dailyCount} a day. Might be worth a look.`;
+    } else if (loudestAppHelper) {
+      loudestAppHelper.textContent = 'All apps muted. Your attention is safe.';
     }
 
     recalculateAttentionMetrics();
   }
 
-  // Prepopulate form count on selection change
-  if (noiseAppSelect) {
-    noiseAppSelect.addEventListener('change', (e) => {
-      const selectedOption = noiseAppSelect.options[noiseAppSelect.selectedIndex];
-      notificationsCountInput.value = selectedOption.getAttribute('data-avg');
-    });
-  }
-
-  // Add App
+  // Add App click handler
   if (addNoiseAppBtn) {
     addNoiseAppBtn.addEventListener('click', () => {
-      const selectedOption = noiseAppSelect.options[noiseAppSelect.selectedIndex];
-      const name = selectedOption.value;
-      const category = selectedOption.getAttribute('data-category');
-      const dailyCount = parseInt(notificationsCountInput.value) || 30;
-
-      if (noiseApps.some(a => a.name.toLowerCase() === name.toLowerCase())) {
-        alert(`${name} is already in the audit list.`);
+      const name = noiseAppInput.value;
+      if (!name) {
+        alert('Please select an app or game from the directory.');
         return;
       }
 
-      noiseApps.push({ name, category, dailyCount, muted: false });
+      const category = noiseAppInput.getAttribute('data-category') || 'Other';
+      const avg = parseInt(noiseAppInput.getAttribute('data-avg')) || 30;
+
+      // Check duplicates
+      if (noiseApps.some(a => a.name.toLowerCase() === name.toLowerCase())) {
+        alert(`${name} is already in the list.`);
+        return;
+      }
+
+      noiseApps.push({
+        name,
+        category,
+        dailyCount: avg,
+        muted: false
+      });
+
+      // Clear input
+      noiseAppInput.value = '';
+      noiseAppInput.removeAttribute('data-category');
+      noiseAppInput.removeAttribute('data-avg');
+
       renderNoiseApps();
       calculateNoiseSum();
     });
   }
 
-  // Initialize Noise Auditor UI
+  // Initialize
   renderNoiseApps();
   calculateNoiseSum();
+  recalculateAttentionMetrics();
 
 });
-
