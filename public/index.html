@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clarity — Cognitive Load Optimizer & Digital Detox Hub</title>
+  
+  <!-- Typography & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Custom Styling -->
+  <link rel="stylesheet" href="css/style.css">
+  
+  <!-- Google Identity Service SDK -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body class="dark-theme">
+  <!-- Dynamic Gradient Orbs for background aesthetic -->
+  <div class="bg-orb-1"></div>
+  <div class="bg-orb-2"></div>
+  
+  <div class="app-container">
+    <!-- Header Section -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-logo">
+          <i class="fa-solid fa-brain-circuit"></i>
+        </div>
+        <div class="brand-text">
+          <h1>Clarity</h1>
+          <p>Cognitive Load Optimizer</p>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <!-- Google Sign-in Container -->
+        <div id="authSection" class="auth-section">
+          <div id="googleSignInBtn"></div>
+          <div id="userProfile" class="user-profile hidden">
+            <img id="userAvatar" src="" alt="Profile Image">
+            <div class="user-meta">
+              <span id="userName">Guest</span>
+              <span class="user-badge" id="authMode">Local</span>
+            </div>
+            <button id="logoutBtn" class="logout-btn" title="Sign Out">
+              <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+    
+    <!-- Zen Metrics Widget -->
+    <section class="metrics-grid">
+      <div class="metric-card main-score">
+        <div class="metric-info">
+          <h3>Attention Index</h3>
+          <p class="subtitle">Real-time mental focus capacity</p>
+          <div class="score-display">
+            <span id="cognitiveLoadScore">85</span><span class="percentage">%</span>
+          </div>
+          <span class="badge warning" id="loadStatus">High Stress</span>
+        </div>
+        <div class="score-gauge-container">
+          <svg class="score-gauge" viewBox="0 0 100 100">
+            <circle class="bg" cx="50" cy="50" r="45"></circle>
+            <circle class="bar" id="gaugeBar" cx="50" cy="50" r="45" style="stroke-dashoffset: 42.4;"></circle>
+          </svg>
+        </div>
+      </div>
+      
+      <div class="metric-card">
+        <div class="metric-icon alert"><i class="fa-solid fa-bell-slash"></i></div>
+        <div class="metric-detail">
+          <span class="value" id="distractionsCount">8</span>
+          <span class="label">Incoming Alerts</span>
+          <p class="trend red"><i class="fa-solid fa-arrow-trend-up"></i> +12% since last hour</p>
+        </div>
+      </div>
+      
+      <div class="metric-card">
+        <div class="metric-icon cost"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+        <div class="metric-detail">
+          <span class="value" id="monthlySpend">$125.96</span>
+          <span class="label">Subscription Leak</span>
+          <p class="trend green"><i class="fa-solid fa-arrow-trend-down"></i> Potential -$67/mo saved</p>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-icon flow"><i class="fa-solid fa-wave-square"></i></div>
+        <div class="metric-detail">
+          <span class="value" id="decisionsFatigue">Moderate</span>
+          <span class="label">Decision Load</span>
+          <p class="trend yellow"><i class="fa-solid fa-triangle-exclamation"></i> 3 pending decisions</p>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Main Workspace -->
+    <main class="app-workspace">
+      <!-- Left Column: Focus Synthesizer & Settings -->
+      <aside class="workspace-sidebar">
+        <!-- Zen Focus Panel -->
+        <div class="widget zen-focus-widget">
+          <div class="widget-header">
+            <h2><i class="fa-solid fa-spa"></i> Zen Focus Space</h2>
+            <span class="pulse-indicator green"></span>
+          </div>
+          
+          <div class="zen-breathing-container">
+            <div class="breathing-ring" id="breathingRing"></div>
+            <div class="breathing-text" id="breathingText">Focus</div>
+          </div>
+          
+          <div class="zen-controls">
+            <div class="audio-toggles">
+              <button class="audio-btn" id="thetaBeatsBtn" data-type="theta">
+                <i class="fa-solid fa-headphones"></i> Binaural Theta (Focus)
+              </button>
+              <button class="audio-btn" id="pinkNoiseBtn" data-type="pink">
+                <i class="fa-solid fa-wind"></i> Pink Noise (Calm)
+              </button>
+            </div>
+            <div class="volume-slider">
+              <i class="fa-solid fa-volume-low"></i>
+              <input type="range" id="volumeControl" min="0" max="1" step="0.05" value="0.5">
+              <i class="fa-solid fa-volume-high"></i>
+            </div>
+            <button class="btn btn-primary btn-block" id="startZenSessionBtn">
+              <i class="fa-solid fa-play"></i> Start 25m Focus Block
+            </button>
+          </div>
+        </div>
+        
+        <!-- Integrations Panel -->
+        <div class="widget integrations-widget">
+          <div class="widget-header">
+            <h2><i class="fa-solid fa-plug"></i> Active Integrations</h2>
+          </div>
+          <p class="widget-desc">Connected models & systems powering Clarity:</p>
+          <div class="integrations-list">
+            <div class="integration-item active">
+              <div class="integration-info">
+                <span class="name"><i class="fa-brands fa-google"></i> Google Login</span>
+                <span class="status">Connected (Dual-Mode)</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" checked disabled>
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="integration-item" id="claudeIntegration">
+              <div class="integration-info">
+                <span class="name"><i class="fa-solid fa-bolt-lightning"></i> Claude 3.5 Sonnet</span>
+                <span class="status" id="claudeStatus">Mock Mode</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="claudeToggle">
+                <span class="slider"></span>
+              </label>
+            </div>
+            <div class="integration-item">
+              <div class="integration-info">
+                <span class="name"><i class="fa-solid fa-wallet"></i> Stripe Billing Audit</span>
+                <span class="status">Sandbox Active</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" checked id="stripeToggle">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </aside>
+      
+      <!-- Right/Middle Column: Content Sections -->
+      <section class="workspace-main">
+        <!-- Tab Navigation -->
+        <nav class="workspace-tabs">
+          <button class="tab-link active" data-tab="triageTab">
+            <i class="fa-solid fa-inbox"></i> Cognitive Triage
+          </button>
+          <button class="tab-link" data-tab="subscriptionsTab">
+            <i class="fa-solid fa-wallet"></i> Subscription Auditor
+          </button>
+          <button class="tab-link" data-tab="deciderTab">
+            <i class="fa-solid fa-brain"></i> Decider AI
+          </button>
+        </nav>
+        
+        <!-- Tab Content: Cognitive Triage -->
+        <div class="tab-content active" id="triageTab">
+          <div class="triage-layout">
+            <div class="raw-feed-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-tower-broadcast"></i> Raw Digital Firehose</h3>
+                <span class="live-tag">LIVE SSE</span>
+              </div>
+              <p class="card-desc">Simulated real-time streams of emails, chat alerts, and distractions.</p>
+              <div class="notifications-feed" id="rawNotificationsFeed">
+                <!-- Notifications populated here by SSE -->
+                <div class="feed-placeholder">
+                  <i class="fa-solid fa-circle-notch fa-spin"></i>
+                  <p>Listening to digital streams...</p>
+                </div>
+              </div>
+              <div class="triage-actions">
+                <button class="btn btn-accent btn-block" id="triageBtn">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> Run AI Cognitive Triage
+                </button>
+              </div>
+            </div>
+            
+            <div class="triage-lanes-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-list-check"></i> Filtered Attention Lanes</h3>
+                <button class="btn btn-sm btn-outline" id="clearTriageBtn">Clear</button>
+              </div>
+              
+              <div class="lanes-container">
+                <div class="lane focus-lane">
+                  <div class="lane-header">
+                    <span class="lane-title"><i class="fa-solid fa-fire"></i> Deep Focus</span>
+                    <span class="count-badge" id="focusLaneCount">0</span>
+                  </div>
+                  <div class="lane-items" id="focusLaneItems">
+                    <div class="lane-placeholder">Critical actionable items appear here</div>
+                  </div>
+                </div>
+                
+                <div class="lane digest-lane">
+                  <div class="lane-header">
+                    <span class="lane-title"><i class="fa-solid fa-book-open"></i> Read Later / Digest</span>
+                    <span class="count-badge" id="digestLaneCount">0</span>
+                  </div>
+                  <div class="lane-items" id="digestLaneItems">
+                    <div class="lane-placeholder">General updates and newsletters</div>
+                  </div>
+                </div>
+                
+                <div class="lane mute-lane">
+                  <div class="lane-header">
+                    <span class="lane-title"><i class="fa-solid fa-volume-xmark"></i> Muted / Ignored</span>
+                    <span class="count-badge" id="muteLaneCount">0</span>
+                  </div>
+                  <div class="lane-items" id="muteLaneItems">
+                    <div class="lane-placeholder">Chat clutter and spam silenced</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Tab Content: Subscription Auditor -->
+        <div class="tab-content" id="subscriptionsTab">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <h3><i class="fa-solid fa-credit-card"></i> Digital Subscription Audit</h3>
+                <p class="card-desc text-muted">Scans billing logs and correlates active usage to identify financial and mental fatigue leaks.</p>
+              </div>
+              <button class="btn btn-outline" id="refreshSubsBtn"><i class="fa-solid fa-rotate"></i> Scan Stripe</button>
+            </div>
+            
+            <div class="table-container">
+              <table class="subs-table">
+                <thead>
+                  <tr>
+                    <th>Service Name</th>
+                    <th>Monthly Cost</th>
+                    <th>Usage Index</th>
+                    <th>Cognitive Value</th>
+                    <th>Recommendation</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="subscriptionsTableBody">
+                  <!-- Filled dynamically -->
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Cancellation Email Modal/View -->
+            <div class="cancel-assistant hidden" id="cancelAssistant">
+              <div class="assistant-header">
+                <h4><i class="fa-solid fa-envelope-open-text"></i> AI Cancellation Assistant</h4>
+                <button class="btn-close" id="closeCancelAssistantBtn">&times;</button>
+              </div>
+              <p class="text-sm">Tailored email draft generated by Claude 3.5 Sonnet to cancel subscription:</p>
+              <div class="email-preview-container">
+                <textarea id="cancellationEmailContent" rows="12" readonly></textarea>
+              </div>
+              <div class="assistant-actions">
+                <button class="btn btn-outline" id="copyEmailBtn"><i class="fa-solid fa-copy"></i> Copy to Clipboard</button>
+                <a href="" class="btn btn-accent" id="sendMailBtn"><i class="fa-solid fa-paper-plane"></i> Send Email</a>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Tab Content: Decider AI -->
+        <div class="tab-content" id="deciderTab">
+          <div class="decider-layout">
+            <div class="dilemma-form-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-scale-balanced"></i> Resolve Decision Fatigue</h3>
+              </div>
+              <p class="card-desc">Feeling overwhelmed by a micro-decision? Offload it here to evaluate it through cognitive templates.</p>
+              
+              <div class="form-group">
+                <label for="dilemmaInput">What decision is weighing on your mind?</label>
+                <textarea id="dilemmaInput" rows="4" placeholder="e.g., Should I reply to this client email on Saturday night, or wait until Monday morning? It feels urgent but it is my weekend."></textarea>
+              </div>
+              
+              <div class="form-group">
+                <label for="frameworkSelect">Choose Evaluation Framework</label>
+                <select id="frameworkSelect">
+                  <option value="eisenhower">Eisenhower Priority Matrix (Urgency vs Importance)</option>
+                  <option value="tenTenTen">10-10-10 Life Horizon Rule (10m, 10mo, 10yr)</option>
+                  <option value="all">Comprehensive Cognitive Suite (Recommended)</option>
+                </select>
+              </div>
+              
+              <button class="btn btn-accent btn-block" id="resolveDecisionBtn">
+                <i class="fa-solid fa-microchip"></i> Analyze Dilemma with Claude
+              </button>
+            </div>
+            
+            <div class="dilemma-results-card" id="decisionResultsCard">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-chart-pie"></i> Cognitive Decision Blueprint</h3>
+              </div>
+              
+              <div class="results-placeholder" id="decisionResultsPlaceholder">
+                <i class="fa-solid fa-brain-circuit"></i>
+                <p>Input your dilemma on the left to unpack its load.</p>
+              </div>
+              
+              <div class="results-content hidden" id="decisionResultsContent">
+                <div class="recommendation-box">
+                  <h5>AI Recommendation:</h5>
+                  <p id="decisionRecommendation">Analyze to get recommendation.</p>
+                </div>
+                
+                <div class="framework-panels">
+                  <div class="framework-panel">
+                    <h6>Eisenhower Quadrant</h6>
+                    <div class="quadrant-display" id="quadrantDisplay">Quadrant II</div>
+                    <div class="score-pills">
+                      <span class="pill">Urgency: <strong id="urgencyValue">0</strong>/10</span>
+                      <span class="pill">Importance: <strong id="importanceValue">0</strong>/10</span>
+                    </div>
+                  </div>
+                  
+                  <div class="framework-panel">
+                    <h6>10-10-10 Impact Timeline</h6>
+                    <div class="timeline-items">
+                      <div class="timeline-item">
+                        <strong>10 Minutes:</strong>
+                        <span id="tenMinImpact">N/A</span>
+                      </div>
+                      <div class="timeline-item">
+                        <strong>10 Months:</strong>
+                        <span id="tenMonthImpact">N/A</span>
+                      </div>
+                      <div class="timeline-item">
+                        <strong>10 Years:</strong>
+                        <span id="tenYearImpact">N/A</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="narrative-box">
+                  <h6>Cognitive Analysis:</h6>
+                  <p id="decisionNarrative">...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+    
+    <footer class="app-footer-info">
+      <p>&copy; 2026 Clarity. Built for Idea2Impact Online Hackathon. Focused on mental wellness & attention preservation.</p>
+    </footer>
+  </div>
+</body>
+</html>
