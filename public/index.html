@@ -190,6 +190,9 @@
           <button class="tab-link" data-tab="deciderTab">
             <i class="fa-solid fa-brain"></i> Decider AI
           </button>
+          <button class="tab-link" data-tab="noiseTab">
+            <i class="fa-solid fa-bell-slash"></i> Noise Audit
+          </button>
         </nav>
         
         <!-- Tab Content: Cognitive Triage -->
@@ -383,6 +386,62 @@
                   <h6>Cognitive Analysis:</h6>
                   <p id="decisionNarrative">...</p>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab Content: App Noise Auditor -->
+        <div class="tab-content" id="noiseTab">
+          <div class="noise-layout">
+            <div class="noise-form-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-volume-high"></i> App Notification Noise</h3>
+              </div>
+              <p class="card-desc">Audit the daily noise volume of your apps and games. Select them directly from the catalog to analyze attention leakage.</p>
+              
+              <div class="form-group">
+                <label for="noiseAppSelect">Select App or Game</label>
+                <select id="noiseAppSelect" style="width: 100%; padding: 0.75rem; background: rgba(10, 15, 29, 0.6); border: 1px solid var(--border-light); border-radius: 10px; color: var(--text-primary);">
+                  <optgroup label="Popular Games">
+                    <option value="PUBG Mobile" data-category="Game" data-avg="35">PUBG Mobile</option>
+                    <option value="Free Fire" data-category="Game" data-avg="40">Free Fire</option>
+                    <option value="Roblox" data-category="Game" data-avg="25">Roblox</option>
+                    <option value="Candy Crush" data-category="Game" data-avg="15">Candy Crush</option>
+                    <option value="Clash of Clans" data-category="Game" data-avg="20">Clash of Clans</option>
+                    <option value="Subway Surfers" data-category="Game" data-avg="10">Subway Surfers</option>
+                    <option value="Among Us" data-category="Game" data-avg="12">Among Us</option>
+                  </optgroup>
+                  <optgroup label="Social & Communication">
+                    <option value="WhatsApp" data-category="Social" data-avg="120">WhatsApp</option>
+                    <option value="Instagram" data-category="Social" data-avg="95">Instagram</option>
+                    <option value="Snapchat" data-category="Social" data-avg="80">Snapchat</option>
+                    <option value="TikTok" data-category="Social" data-avg="110">TikTok</option>
+                    <option value="Discord" data-category="Social" data-avg="60">Discord</option>
+                    <option value="YouTube" data-category="Social" data-avg="40">YouTube</option>
+                  </optgroup>
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label for="notificationsCountInput">Estimated Notifications per Day</label>
+                <input type="number" id="notificationsCountInput" min="1" max="500" value="35" style="width: 100%; padding: 0.75rem; background: rgba(10, 15, 29, 0.6); border: 1px solid var(--border-light); border-radius: 10px; color: var(--text-primary);">
+              </div>
+              
+              <button class="btn btn-accent btn-block" id="addNoiseAppBtn">
+                <i class="fa-solid fa-plus"></i> Add App to Audit
+              </button>
+            </div>
+            
+            <div class="noise-list-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-list"></i> Monitored App Volume</h3>
+                <span class="badge warning" id="noiseVolumeStatus">Loud Noise</span>
+              </div>
+              <p class="card-desc">Active alert volumes currently leaking your focus. Each alert costs an estimated 1 minute of attention recovery time.</p>
+              
+              <div class="noise-apps-list" id="noiseAppsListContainer">
+                <!-- Filled dynamically -->
               </div>
             </div>
           </div>

@@ -652,4 +652,140 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // ==========================================
+  // 8. App Noise Auditor
+  // ==========================================
+  let noiseApps = [
+    { name: 'WhatsApp', category: 'Social', dailyCount: 120, muted: false },
+    { name: 'Instagram', category: 'Social', dailyCount: 95, muted: false },
+    { name: 'PUBG Mobile', category: 'Game', dailyCount: 35, muted: false }
+  ];
+
+  const addNoiseAppBtn = document.getElementById('addNoiseAppBtn');
+  const noiseAppSelect = document.getElementById('noiseAppSelect');
+  const notificationsCountInput = document.getElementById('notificationsCountInput');
+  const noiseAppsListContainer = document.getElementById('noiseAppsListContainer');
+
+  function renderNoiseApps() {
+    if (!noiseAppsListContainer) return;
+
+    if (noiseApps.length === 0) {
+      noiseAppsListContainer.innerHTML = `
+        <div class="feed-placeholder">
+          <i class="fa-solid fa-volume-xmark" style="color: var(--text-muted); font-size: 1.5rem;"></i>
+          <p>No noisy apps monitored. Safe attention zone.</p>
+        </div>`;
+      const volumeStatus = document.getElementById('noiseVolumeStatus');
+      if (volumeStatus) {
+        volumeStatus.textContent = 'Silent';
+        volumeStatus.className = 'badge success';
+      }
+      return;
+    }
+
+    noiseAppsListContainer.innerHTML = noiseApps.map((app, index) => {
+      const timeLost = app.dailyCount; // 1 min per notification
+      return `
+        <div class="noise-app-item">
+          <div class="noise-app-info">
+            <span class="noise-app-name">${app.name}</span>
+            <span class="noise-app-meta">${app.category}</span>
+          </div>
+          <div class="noise-app-actions">
+            <div class="noise-app-stats">
+              <span class="noise-app-count" style="${app.muted ? 'color: var(--text-muted); font-weight: normal;' : 'font-weight: bold;'}">
+                ${app.muted ? 'Muted' : `${app.dailyCount} / day`}
+              </span>
+              <span class="noise-app-time">${app.muted ? '0m wasted' : `~${timeLost}m lost/day`}</span>
+            </div>
+            
+            <button class="btn btn-sm btn-outline mute-app-btn" data-index="${index}">
+              <i class="fa-solid ${app.muted ? 'fa-volume-high' : 'fa-volume-xmark'}"></i>
+            </button>
+            <button class="btn-delete-app delete-app-btn" data-index="${index}">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Attach listeners
+    document.querySelectorAll('.mute-app-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const index = parseInt(e.currentTarget.getAttribute('data-index'));
+        noiseApps[index].muted = !noiseApps[index].muted;
+        renderNoiseApps();
+        calculateNoiseSum();
+      });
+    });
+
+    document.querySelectorAll('.delete-app-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const index = parseInt(e.currentTarget.getAttribute('data-index'));
+        noiseApps.splice(index, 1);
+        renderNoiseApps();
+        calculateNoiseSum();
+      });
+    });
+  }
+
+  function calculateNoiseSum() {
+    const activeCount = noiseApps.filter(a => !a.muted).reduce((sum, a) => sum + a.dailyCount, 0);
+    
+    // Update dashboard indicator badge & number
+    const activeAppsCount = noiseApps.filter(a => !a.muted).length;
+    if (distractionsCountElement) {
+      distractionsCountElement.textContent = activeAppsCount;
+    }
+    
+    const badge = document.getElementById('noiseVolumeStatus');
+    if (badge) {
+      if (activeCount > 150) {
+        badge.textContent = 'High Noise';
+        badge.className = 'badge alert';
+      } else if (activeCount > 50) {
+        badge.textContent = 'Loud Noise';
+        badge.className = 'badge warning';
+      } else {
+        badge.textContent = 'Quiet';
+        badge.className = 'badge success';
+      }
+    }
+
+    recalculateAttentionMetrics();
+  }
+
+  // Prepopulate form count on selection change
+  if (noiseAppSelect) {
+    noiseAppSelect.addEventListener('change', (e) => {
+      const selectedOption = noiseAppSelect.options[noiseAppSelect.selectedIndex];
+      notificationsCountInput.value = selectedOption.getAttribute('data-avg');
+    });
+  }
+
+  // Add App
+  if (addNoiseAppBtn) {
+    addNoiseAppBtn.addEventListener('click', () => {
+      const selectedOption = noiseAppSelect.options[noiseAppSelect.selectedIndex];
+      const name = selectedOption.value;
+      const category = selectedOption.getAttribute('data-category');
+      const dailyCount = parseInt(notificationsCountInput.value) || 30;
+
+      if (noiseApps.some(a => a.name.toLowerCase() === name.toLowerCase())) {
+        alert(`${name} is already in the audit list.`);
+        return;
+      }
+
+      noiseApps.push({ name, category, dailyCount, muted: false });
+      renderNoiseApps();
+      calculateNoiseSum();
+    });
+  }
+
+  // Initialize Noise Auditor UI
+  renderNoiseApps();
+  calculateNoiseSum();
+
 });
+

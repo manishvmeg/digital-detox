@@ -1359,3 +1359,97 @@ input:checked + .slider:before {
   color: var(--accent-success);
 }
 
+/* Noise Tab Layout */
+.noise-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 1.5rem;
+}
+
+.noise-form-card, .noise-list-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.noise-apps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+/* App Noise list item */
+.noise-app-item {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: var(--transition-smooth);
+}
+
+.noise-app-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.noise-app-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.noise-app-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.noise-app-meta {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.noise-app-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.noise-app-stats {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+}
+
+.noise-app-count {
+  font-weight: 700;
+  color: var(--accent-danger);
+}
+
+.noise-app-time {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+.btn-delete-app {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.25rem;
+  font-size: 1rem;
+  transition: var(--transition-smooth);
+}
+
+.btn-delete-app:hover {
+  color: var(--accent-danger);
+}
+
+
