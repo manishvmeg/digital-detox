@@ -250,19 +250,45 @@
         
         <div class="card add-app-card">
           <div class="card-header">
-            <h4>NOTIFICATIONS A DAY</h4>
+            <h4>NOTIFICATIONS AUDITOR</h4>
           </div>
           
-          <div class="add-app-inputs">
+          <div class="add-app-inputs" style="display: flex; flex-direction: column; gap: 0.75rem;">
             <!-- Search App Input triggers the Catalog overlay -->
             <div class="search-input-wrapper">
-              <input type="text" id="noiseAppInput" placeholder="Select app or game..." readonly>
+              <input type="text" id="noiseAppInput" placeholder="Select app or game from catalog..." readonly style="width: 100%; border-radius: 50px;">
               <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
             </div>
             
-            <button class="btn btn-dark" id="addNoiseAppBtn">+ Add app</button>
+            <div class="form-group" style="margin: 0;">
+              <label for="notificationsCountInput" style="font-size: 0.7rem; font-weight: bold;">Daily Notification Rate</label>
+              <input type="number" id="notificationsCountInput" min="1" max="1000" value="30" style="padding: 0.5rem 1rem; border-radius: 50px;">
+            </div>
+
+            <div class="form-group" style="margin: 0;">
+              <label for="appLimitInput" style="font-size: 0.7rem; font-weight: bold;">Focus Mode Threshold Limit (Alerts allowed before blocking)</label>
+              <input type="number" id="appLimitInput" min="1" max="20" value="1" style="padding: 0.5rem 1rem; border-radius: 50px;">
+            </div>
+            
+            <button class="btn btn-dark" id="addNoiseAppBtn" style="border-radius: 50px;">+ Add app</button>
           </div>
-          <p class="helper-text" id="loudestAppHelper">The loudest is whatsapp at about 120 a day. Might be worth a look.</p>
+          <p class="helper-text" id="loudestAppHelper" style="margin-top: 0.5rem;">The loudest is whatsapp at about 120 a day. Might be worth a look.</p>
+        </div>
+
+        <!-- File Upload Card -->
+        <div class="card upload-card">
+          <div class="card-header">
+            <h4>IMPORT PHONE NOTIFICATION LOGS</h4>
+          </div>
+          <p class="card-desc text-sm">Upload an exported notification log or app list (CSV, JSON, or TXT) to automatically populate noise ratings and limits.</p>
+          <div class="file-upload-wrapper" style="text-align: center; padding: 1.5rem; background: var(--bg-sand); border: 2px dashed var(--border-muted); border-radius: 16px; cursor: pointer; position: relative;">
+            <label for="notificationLogFile" class="file-upload-label" style="cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+              <i class="fa-solid fa-file-arrow-up" style="font-size: 2rem; color: var(--text-secondary);"></i>
+              <span style="font-weight: bold; font-size: 0.8rem;" id="fileNameDisplay">Select phone log file (CSV, JSON, TXT)</span>
+            </label>
+            <input type="file" id="notificationLogFile" accept=".csv, .json, .txt" style="opacity: 0; position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer;">
+          </div>
+          <div id="uploadStatusMessage" class="upload-status text-sm hidden" style="margin-top: 0.75rem; color: var(--accent-green); font-weight: bold; text-align: center;"></div>
         </div>
         
         <div class="noise-apps-container" id="noiseAppsListContainer">
